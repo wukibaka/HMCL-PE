@@ -1,35 +1,39 @@
 name: Android CI
 
-on:
-  watch:
+on: 
+  watch: 
     types: [started]
-  pull_request:
+  pull_request: 
     branches: [ main ]
 
-jobs:
-  build:
+jobs: 
+  build: 
     runs-on: ubuntu-latest
 
-    steps:
-    - name: check out
-      uses: actions/checkout@v3
+    steps: 
+    - name: 编译开始通知
+      run: |
+        curl -k --data chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" --data "text=🎉 主人，您正在编译HMCL-PE,请耐心等待...... 😋" "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage"
 
-    - name: set up JDK 11
+    - name: 检查
+      uses: actions/checkout@main
+
+    - name: 安装 JDK 11
       uses: actions/setup-java@v3
-      with:
+      with: 
         java-version: '11'
         distribution: 'temurin'
         cache: gradle
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+    - name: 给予gradlew执行许可
+      run: |
+        sudo chmod +x gradlew
 
-    - name: Build with Gradle
-      run: ./gradlew build
-
-    - name: Upload firmware directory
-      uses​: ​actions/upload-artifact@main
+    - name: 编译
+      run: |
+        sudo ./gradlew build
+    
+    - name: 上传
+      uses: actions/upload-artifact@main
       with: 
         path: /HMCLPE/build/outputs/apk/release/HMCLPE-release-unsigned.apk
-
-    
