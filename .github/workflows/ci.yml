@@ -27,6 +27,6 @@ jobs:
       run: ./gradlew build
 
     - name: Upload firmware directory
-      uses​: ​actions/upload-artifact@main
+       uses​: ​actions/upload-artifact@main
         with: 
           path: /HMCLPE/build/outputs/apk/release/HMCLPE-release-unsigned.apk
