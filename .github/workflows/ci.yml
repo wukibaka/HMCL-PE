@@ -23,11 +23,11 @@ jobs:
 
     - name: 给予gradlew执行许可
       run: |
-        sudo chmod +x gradlew
+        chmod +x gradlew
 
     - name: 编译
       run: |
-        sudo ./gradlew build
+        ./gradlew build
     
     - name: 上传
       uses: actions/upload-artifact@main
