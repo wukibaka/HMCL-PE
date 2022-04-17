@@ -1,18 +1,21 @@
 name: Android CI
 
 on: 
-  watch: 
-    types: [started]
+  workflow_dispatch: 
   pull_request: 
     branches: [ main ]
-
+​
 jobs: 
   build: 
     runs-on: ubuntu-latest
 
     steps: 
+    - name: 编译开始通知
+      run: |
+       curl -k --data chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" --data "text=🎉 主人，您正在编译HMCL-PE,请耐心等待...... 😋" "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage"
+
     - name: 检查
-      uses: actions/checkout@main
+      uses: actions/checkout@v3
 
     - name: 安装 JDK 11
       uses: actions/setup-java@v3
@@ -23,13 +26,13 @@ jobs:
 
     - name: 给予gradlew执行许可
       run: |
-        chmod +x gradlew
+        sudo chmod +x gradlew
 
     - name: 编译
       run: |
-        ./gradlew build
+        cd HMCLPE&&sudo ./gradlew build
     
     - name: 上传
-      uses: actions/upload-artifact@main
+      uses: actions/upload-artifact@v3
       with: 
-        path: /HMCLPE/build/outputs/apk/release/HMCLPE-release-unsigned.apk
+        path: HMCLPE/build/outputs/apk/release/HMCLPE-release-unsigned.apk
