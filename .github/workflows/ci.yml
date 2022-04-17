@@ -12,7 +12,7 @@ jobs:
     steps: 
     - name: 编译开始通知
       run: |
-        curl -k --data chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" --data "text=🎉 主人，您正在编译openwrt固件,请耐心等待...... 😋" "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage"
+        curl -k --data chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" --data "text=🎉 主人，您正在HMCL-PE,请耐心等待...... 😋" "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage"
 
     - name: 检查
       uses: actions/checkout@v3
@@ -30,7 +30,7 @@ jobs:
 
     - name: 编译
       run: |
-        cd HMCLPE&&sudo ./gradlew build
+        cd HMCLPE&&../gradlew build
     
     - name: 上传
       uses: actions/upload-artifact@v3
