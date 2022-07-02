@@ -2,7 +2,6 @@ package com.tungsten.hmclpe.control;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -23,12 +22,14 @@ import com.tungsten.hmclpe.R;
 import com.tungsten.hmclpe.control.bean.BaseButtonInfo;
 import com.tungsten.hmclpe.control.bean.BaseRockerViewInfo;
 import com.tungsten.hmclpe.control.view.LayoutPanel;
+import com.tungsten.hmclpe.control.view.TouchCharInput;
 import com.tungsten.hmclpe.launcher.dialogs.control.AddViewDialog;
 import com.tungsten.hmclpe.launcher.dialogs.control.ChildManagerDialog;
 import com.tungsten.hmclpe.launcher.dialogs.control.EditControlPatternDialog;
+import com.tungsten.hmclpe.launcher.dialogs.hin2n.Hin2nMenuDialog;
 import com.tungsten.hmclpe.launcher.list.local.controller.ChildLayout;
 import com.tungsten.hmclpe.launcher.list.local.controller.ControlPattern;
-import com.tungsten.hmclpe.launcher.manifest.AppManifest;
+import com.tungsten.hmclpe.manifest.AppManifest;
 import com.tungsten.hmclpe.launcher.setting.InitializeSetting;
 import com.tungsten.hmclpe.launcher.setting.SettingUtils;
 import com.tungsten.hmclpe.launcher.setting.game.GameMenuSetting;
@@ -54,10 +55,13 @@ public class MenuHelper implements CompoundButton.OnCheckedChangeListener, View.
 
     public GameMenuSetting gameMenuSetting;
 
+    public TouchCharInput touchCharInput;
+
     public SwitchCompat switchMenuFloat;
     public SwitchCompat switchMenuView;
     public SwitchCompat switchMenuSlide;
     public SwitchCompat switchFloatMovable;
+    public SwitchCompat switchAdvanceInput;
     public SwitchCompat switchSensor;
     public SwitchCompat switchHalfScreen;
     public Spinner spinnerTouchMode;
@@ -69,6 +73,7 @@ public class MenuHelper implements CompoundButton.OnCheckedChangeListener, View.
     public TextView mouseSizeText;
     public SeekBar mouseSizeSeekbar;
     public SwitchCompat switchHideUI;
+    public Button openHin2nMenu;
     public Button forceExit;
 
     public Spinner patternSpinner;
@@ -89,7 +94,19 @@ public class MenuHelper implements CompoundButton.OnCheckedChangeListener, View.
     public ArrayList<String> childLayoutList;
     public ArrayAdapter<String> childAdapter;
 
+    public int gameCursorMode = 0;
+
     public ViewManager viewManager;
+    public MKManager mkManager;
+
+    public boolean enterLock;
+
+    public float cursorX;
+    public float cursorY;
+    public float pointerX;
+    public float pointerY;
+    public float currentX;
+    public float currentY;
 
     public MenuHelper(Context context, AppCompatActivity activity,boolean fullscreen,String gameDir, DrawerLayout drawerLayout, LayoutPanel baseLayout,boolean editMode,String currentPattern,int launcher,float scaleFactor){
         this.context = context;
@@ -123,6 +140,26 @@ public class MenuHelper implements CompoundButton.OnCheckedChangeListener, View.
         }
     }
 
+    public void enableCursor() {
+        gameCursorMode = 0;
+        if (viewManager != null) {
+            viewManager.enableCursor();
+        }
+        if (mkManager != null) {
+            mkManager.enableCursor();
+        }
+    }
+
+    public void disableCursor(){
+        gameCursorMode = 1;
+        if (viewManager != null) {
+            viewManager.disableCursor();
+        }
+        if (mkManager != null) {
+            mkManager.disableCursor();
+        }
+    }
+
     public void preInit (LayoutPanel baseLayout,boolean editMode,String currentPattern) {
         for (ControlPattern controlPattern : patternList){
             if (controlPattern.name.equals(currentPattern)){
@@ -133,7 +170,7 @@ public class MenuHelper implements CompoundButton.OnCheckedChangeListener, View.
             currentPattern = SettingUtils.getControlPatternList().get(0).name;
         }
         currentChild = SettingUtils.getChildList(currentPattern).size() > 0 ? SettingUtils.getChildList(currentPattern).get(0).name : null;
-        if (editMode){
+        if (launcher == 0){
             baseLayout.showBackground();
         }
 
@@ -143,10 +180,14 @@ public class MenuHelper implements CompoundButton.OnCheckedChangeListener, View.
 
     @SuppressLint("SetTextI18n")
     public void init(){
+        touchCharInput = activity.findViewById(R.id.input_scanner);
+        touchCharInput.setCharacterSender(this, new LwjglCharSender());
+
         switchMenuFloat = activity.findViewById(R.id.switch_float_button);
         switchMenuView = activity.findViewById(R.id.switch_bar);
         switchMenuSlide = activity.findViewById(R.id.switch_gesture);
         switchFloatMovable = activity.findViewById(R.id.switch_float_movable);
+        switchAdvanceInput = activity.findViewById(R.id.switch_advance_input);
         switchSensor = activity.findViewById(R.id.switch_control_sensor);
         switchHalfScreen = activity.findViewById(R.id.switch_half_screen);
         spinnerTouchMode = activity.findViewById(R.id.spinner_touch_mode);
@@ -158,12 +199,14 @@ public class MenuHelper implements CompoundButton.OnCheckedChangeListener, View.
         mouseSizeText = activity.findViewById(R.id.mouse_size_text);
         mouseSizeSeekbar = activity.findViewById(R.id.mouse_size);
         switchHideUI = activity.findViewById(R.id.switch_hide_ui);
+        openHin2nMenu = activity.findViewById(R.id.open_hin2n_menu);
         forceExit = activity.findViewById(R.id.force_exit);
 
         switchMenuFloat.setChecked(gameMenuSetting.menuFloatSetting.enable);
         switchMenuView.setChecked(gameMenuSetting.menuViewSetting.enable);
         switchMenuSlide.setChecked(gameMenuSetting.menuSlideSetting);
         switchFloatMovable.setChecked(gameMenuSetting.menuFloatSetting.movable);
+        switchAdvanceInput.setChecked(gameMenuSetting.advanceInput);
         switchSensor.setChecked(gameMenuSetting.enableSensor);
         switchHalfScreen.setChecked(gameMenuSetting.disableHalfScreen);
         switchHideUI.setChecked(gameMenuSetting.hideUI);
@@ -172,9 +215,11 @@ public class MenuHelper implements CompoundButton.OnCheckedChangeListener, View.
         switchMenuView.setOnCheckedChangeListener(this);
         switchMenuSlide.setOnCheckedChangeListener(this);
         switchFloatMovable.setOnCheckedChangeListener(this);
+        switchAdvanceInput.setOnCheckedChangeListener(this);
         switchSensor.setOnCheckedChangeListener(this);
         switchHalfScreen.setOnCheckedChangeListener(this);
         switchHideUI.setOnCheckedChangeListener(this);
+        openHin2nMenu.setOnClickListener(this);
         forceExit.setOnClickListener(this);
 
         ArrayList<String> touchModes = new ArrayList<>();
@@ -253,14 +298,12 @@ public class MenuHelper implements CompoundButton.OnCheckedChangeListener, View.
         childSpinner.setOnItemSelectedListener(this);
         addView.setOnClickListener(this);
 
-        baseLayout.post(new Runnable() {
-            @Override
-            public void run() {
-                screenWidth = baseLayout.getWidth();
-                screenHeight = baseLayout.getHeight();
-                viewManager = new ViewManager(context,activity,MenuHelper.this,baseLayout,launcher);
-                checkOpenMenuSetting();
-            }
+        baseLayout.post(() -> {
+            screenWidth = baseLayout.getWidth();
+            screenHeight = baseLayout.getHeight();
+            viewManager = new ViewManager(context,activity,this,baseLayout,launcher);
+            mkManager = new MKManager(this);
+            checkOpenMenuSetting();
         });
 
         if (gameMenuSetting.menuSlideSetting){
@@ -339,6 +382,10 @@ public class MenuHelper implements CompoundButton.OnCheckedChangeListener, View.
             gameMenuSetting.menuFloatSetting.movable = b;
             GameMenuSetting.saveGameMenuSetting(gameMenuSetting);
         }
+        if (compoundButton == switchAdvanceInput) {
+            gameMenuSetting.advanceInput = b;
+            GameMenuSetting.saveGameMenuSetting(gameMenuSetting);
+        }
         if (compoundButton == switchSensor){
             gameMenuSetting.enableSensor = b;
             GameMenuSetting.saveGameMenuSetting(gameMenuSetting);
@@ -373,11 +420,20 @@ public class MenuHelper implements CompoundButton.OnCheckedChangeListener, View.
         }
         if (compoundButton == showOutlineSwitch) {
             showOutline = b;
+            if (viewManager != null) {
+                viewManager.refreshViews();
+            }
         }
     }
 
     @Override
     public void onClick(View view) {
+        if (view == openHin2nMenu) {
+            if (launcher != 0) {
+                Hin2nMenuDialog dialog = new Hin2nMenuDialog(context);
+                dialog.show();
+            }
+        }
         if (view == forceExit) {
             AlertDialog.Builder builder = new AlertDialog.Builder(context);
             builder.setTitle(context.getString(R.string.dialog_force_exit_title));

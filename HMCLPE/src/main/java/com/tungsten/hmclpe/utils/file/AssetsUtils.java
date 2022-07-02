@@ -1,7 +1,6 @@
 package com.tungsten.hmclpe.utils.file;
 
 import android.content.Context;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -19,6 +18,7 @@ public class AssetsUtils {
     private static final int FAILED = 0;
     private Context context;
     private FileOperateCallback callback;
+    private ProgressCallback progressCallback;
     private volatile boolean isSuccess;
     private String errorStr;
 
@@ -64,20 +64,31 @@ public class AssetsUtils {
     }
 
     public AssetsUtils copyAssetsToSD(final String srcPath, final String sdPath) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                copyAssetsToDst(context, srcPath, sdPath);
-                if (isSuccess)
-                    handler.obtainMessage(SUCCESS).sendToTarget();
-                else
-                    handler.obtainMessage(FAILED, errorStr).sendToTarget();
-            }
+        currentPosition = 0;
+        try {
+            totalSize = getTotalSize(context,srcPath);
+            Log.e("assetsFileSize",Long.toString(totalSize));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        new Thread(() -> {
+            copyAssetsToDst(context, srcPath, sdPath);
+            if (isSuccess)
+                handler.obtainMessage(SUCCESS).sendToTarget();
+            else
+                handler.obtainMessage(FAILED, errorStr).sendToTarget();
         }).start();
         return this;
     }
 
     public AssetsUtils copyOnMainThread(final String srcPath, final String sdPath) {
+        currentPosition = 0;
+        try {
+            totalSize = getTotalSize(context,srcPath);
+            Log.e("assetsFileSize",Long.toString(totalSize));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         copyAssetsToDst(context, srcPath, sdPath);
         if (isSuccess) {
             handler.obtainMessage(SUCCESS).sendToTarget();
@@ -88,9 +99,18 @@ public class AssetsUtils {
         return this;
     }
 
+    public void setProgressCallback(ProgressCallback callback) {
+        this.progressCallback = callback;
+    }
+
     public void setFileOperateCallback(FileOperateCallback callback) {
         this.callback = callback;
     }
+
+    long currentPosition = 0;
+    long totalSize = 0;
+
+    int currentProgress = 0;
 
     private void copyAssetsToDst(Context context, String srcPath, String dstPath) {
         try {
@@ -112,7 +132,18 @@ public class AssetsUtils {
                 byte[] buffer = new byte[1024];
                 int byteCount;
                 while ((byteCount = is.read(buffer)) != -1) {
+                    currentPosition += byteCount;
                     fos.write(buffer, 0, byteCount);
+                    if (progressCallback != null) {
+                        long cur = 100L * currentPosition;
+                        int progress = (int) (cur / totalSize);
+                        if (progress != currentProgress) {
+                            currentProgress = progress;
+                            handler.post(() -> {
+                                progressCallback.onProgress(progress);
+                            });
+                        }
+                    }
                 }
                 fos.flush();
                 is.close();
@@ -126,10 +157,31 @@ public class AssetsUtils {
         }
     }
 
+    private long getTotalSize(Context context,String srcPath) throws IOException {
+        String fileNames[] = context.getAssets().list(srcPath);
+        long size = 0;
+        if (fileNames.length > 0) {
+            for (String fileName : fileNames) {
+                if (!srcPath.equals("")) { // assets 文件夹下的目录
+                    size += getTotalSize(context, srcPath + File.separator + fileName);
+                } else { // assets 文件夹
+                    size += getTotalSize(context, fileName);
+                }
+            }
+        } else {
+            InputStream is = context.getAssets().open(srcPath);
+            size += is.available();
+        }
+        return size;
+    }
+
     public interface FileOperateCallback {
         void onSuccess();
-
         void onFailed(String error);
+    }
+
+    public interface ProgressCallback{
+        void onProgress(int progress);
     }
 
 }

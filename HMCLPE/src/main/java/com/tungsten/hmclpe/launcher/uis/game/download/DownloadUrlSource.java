@@ -20,10 +20,10 @@ public class DownloadUrlSource {
     public static int FORGE_LIBRARIES = 6;
 
     public static String[] OFFICIAL_URLS = {
-            "https://launchermeta.mojang.com/mc/game/version_manifest.json",
-            "https://launchermeta.mojang.com",
+            "https://piston-meta.mojang.com/mc/game/version_manifest.json",
+            "https://piston-meta.mojang.com",
             "https://launcher.mojang.com",
-            "https://launchermeta.mojang.com",
+            "https://piston-meta.mojang.com",
             "https://resources.download.minecraft.net",
             "https://libraries.minecraft.net",
             "https://maven.minecraftforge.net"
@@ -71,6 +71,7 @@ public class DownloadUrlSource {
     static long mcbbs = 0;
 
     public static void getBalancedSource(Context context){
+        /*
         NetPingManager officialNetPingService = new NetPingManager(context, "www.minecraft.net", new NetPingManager.IOnNetPingListener() {
             @Override
             public void onDelay(NetPingManager netPingManager,long log) {
@@ -119,6 +120,8 @@ public class DownloadUrlSource {
         officialNetPingService.startGetDelay();
         bmclapiNetPingService.startGetDelay();
         mcbbsNetPingService.startGetDelay();
+
+         */
     }
 
     public static int getSource(SourceSetting sourceSetting) {
@@ -127,6 +130,7 @@ public class DownloadUrlSource {
                 return 0;
             }
             else if (sourceSetting.autoSourceType == 1) {
+                /*
                 long faster = Math.min(official,bmclapi);
                 long fastest = Math.min(faster,mcbbs);
                 if (official == bmclapi && official == 0 && mcbbs == 0) {
@@ -141,6 +145,9 @@ public class DownloadUrlSource {
                 else {
                     return 2;
                 }
+
+                 */
+                return 2;
             }
             else {
                 return 2;
